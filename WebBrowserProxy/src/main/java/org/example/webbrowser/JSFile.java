@@ -48,9 +48,7 @@ public class JSFile {
                 contentBuilder.append(line).append("\n");
             }
             this.content = contentBuilder.toString();
-            System.out.println("JS file loaded: " + fileName);
         } catch (IOException e) {
-            System.err.println("Error loading JS file: " + fileName);
             e.printStackTrace();
         }
     }

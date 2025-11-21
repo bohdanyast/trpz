@@ -52,22 +52,11 @@ public class ImageFile implements IImage {
 
     @Override
     public void loadImage() {
-        System.out.println("Loading real image: " + fileName + "...");
-
-        // Simulating load for testing
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-
         try {
             byte[] fileContent = Files.readAllBytes(Paths.get(filePath));
             this.content = Base64.getEncoder().encodeToString(fileContent);
             this.loaded = true;
-            System.out.println("Real image loaded: " + fileName);
         } catch (IOException e) {
-            System.err.println("Error loading image file: " + fileName);
             this.loaded = false;
         }
     }
@@ -77,6 +66,5 @@ public class ImageFile implements IImage {
         if (!loaded) {
             loadImage();
         }
-        System.out.println("Displaying real image: " + fileName + " (size: " + content.length() + " chars)");
     }
 }

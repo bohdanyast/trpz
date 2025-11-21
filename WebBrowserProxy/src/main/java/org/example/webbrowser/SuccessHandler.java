@@ -15,11 +15,6 @@ public class SuccessHandler extends AbstractHTTPHandler {
     
     @Override
     protected void processResponse(HTTPResponse response) {
-        System.out.println("[SuccessHandler] Processing HTTP 200 OK response");
-        System.out.println("[SuccessHandler] Content length: " + response.getBody().length() + " characters");
-        System.out.println("[SuccessHandler] Response handled successfully");
-        
-        // Mark response as successfully processed
         response.getHeaders().put("X-Handled-By", "SuccessHandler");
     }
 }

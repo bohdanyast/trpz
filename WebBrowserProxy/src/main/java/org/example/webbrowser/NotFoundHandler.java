@@ -15,11 +15,6 @@ public class NotFoundHandler extends AbstractHTTPHandler {
     
     @Override
     protected void processResponse(HTTPResponse response) {
-        System.out.println("[NotFoundHandler] Processing HTTP 404 Not Found response");
-        System.out.println("[NotFoundHandler] The requested resource was not found on the server");
-        System.out.println("[NotFoundHandler] Displaying error page to user");
-        
-        // Enhance error response with additional information
         if (!response.getBody().contains("404")) {
             String errorPage = generateErrorPage();
             response.setBody(errorPage);
@@ -30,7 +25,7 @@ public class NotFoundHandler extends AbstractHTTPHandler {
     }
     
     /**
-     * Generates a user-friendly 404 error page
+     * Generates 404 error page
      * 
      * @return HTML content for 404 error page
      */

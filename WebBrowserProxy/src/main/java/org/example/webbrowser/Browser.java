@@ -31,21 +31,13 @@ public class Browser {
             
             if (response.getStatusCode() == 200) {
                 currentPage = new WebPage();
-                request.parseResponse(response);
                 currentPage.parseHTML();
                 currentPage.loadResources();
-                displayPage(currentPage);
             } else {
                 handleError(response.getStatusCode());
             }
         } else {
             handleError(400);
-        }
-    }
-
-    public void displayPage(WebPage page) {
-        if (page != null) {
-            System.out.println("Displaying page with " + page.getHtmlResources().size() + " HTML resources");
         }
     }
 

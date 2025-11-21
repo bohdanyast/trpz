@@ -30,15 +30,12 @@ public class HTTPHandlerChain {
         HTTPResponseHandler successHandler = new SuccessHandler();
 
         // Link handlers in chain
+        successHandler.setNext(notFoundHandler);
         notFoundHandler.setNext(badGatewayHandler);
         badGatewayHandler.setNext(serviceUnavailableHandler);
-        serviceUnavailableHandler.setNext(successHandler);
 
         // Set first handler
         firstHandler = notFoundHandler;
-        
-        System.out.println("[HTTPHandlerChain] Handler chain initialized:");
-        System.out.println("[HTTPHandlerChain] NotFoundHandler -> BadGatewayHandler -> ServiceUnavailableHandler -> SuccessHandler -> DefaultHandler");
     }
     
     /**
@@ -49,19 +46,8 @@ public class HTTPHandlerChain {
      */
     public boolean process(HTTPResponse response) {
         if (firstHandler == null) {
-            System.err.println("[HTTPHandlerChain] Error: Handler chain is not initialized");
             return false;
         }
-        
-        System.out.println("\n[HTTPHandlerChain] Starting chain processing for status code: " + response.getStatusCode());
-        boolean handled = firstHandler.handle(response);
-        
-        if (handled) {
-            System.out.println("[HTTPHandlerChain] Response successfully processed by chain");
-        } else {
-            System.out.println("[HTTPHandlerChain] Warning: Response was not handled by any handler");
-        }
-        
-        return handled;
+        return firstHandler.handle(response);
     }
 }

@@ -48,9 +48,7 @@ public class CSSFile {
                 contentBuilder.append(line).append("\n");
             }
             this.content = contentBuilder.toString();
-            System.out.println("CSS file loaded: " + fileName);
         } catch (IOException e) {
-            System.err.println("Error loading CSS file: " + fileName);
             e.printStackTrace();
         }
     }

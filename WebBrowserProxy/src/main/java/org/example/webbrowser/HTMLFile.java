@@ -9,12 +9,6 @@ public class HTMLFile {
     private String filePath;
     private String content;
     
-    public HTMLFile(String fileName, String filePath) {
-        this.fileName = fileName;
-        this.filePath = filePath;
-        this.content = "";
-    }
-    
     public HTMLFile(String fileName, String filePath, String content) {
         this.fileName = fileName;
         this.filePath = filePath;
@@ -54,9 +48,7 @@ public class HTMLFile {
                 contentBuilder.append(line).append("\n");
             }
             this.content = contentBuilder.toString();
-            System.out.println("HTML file loaded: " + fileName);
         } catch (IOException e) {
-            System.err.println("Error loading HTML file: " + fileName);
             e.printStackTrace();
         }
     }

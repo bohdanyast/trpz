@@ -4,7 +4,6 @@ package org.example.webbrowser;
  * Concrete Handler for HTTP 502 Bad Gateway responses
  * 
  * Handles cases where the server received an invalid response from an upstream server.
- * This is a server error (5xx series).
  */
 public class BadGatewayHandler extends AbstractHTTPHandler {
     
@@ -15,10 +14,6 @@ public class BadGatewayHandler extends AbstractHTTPHandler {
     
     @Override
     protected void processResponse(HTTPResponse response) {
-        System.out.println("[BadGatewayHandler] Processing HTTP 502 Bad Gateway response");
-        System.out.println("[BadGatewayHandler] The server received an invalid response from upstream");
-        System.out.println("[BadGatewayHandler] This is typically a temporary issue");
-        
         // Enhance error response
         if (!response.getBody().contains("502")) {
             String errorPage = generateErrorPage();

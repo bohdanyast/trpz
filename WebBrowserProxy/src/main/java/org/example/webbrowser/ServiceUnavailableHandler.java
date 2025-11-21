@@ -15,15 +15,8 @@ public class ServiceUnavailableHandler extends AbstractHTTPHandler {
     
     @Override
     protected void processResponse(HTTPResponse response) {
-        System.out.println("[ServiceUnavailableHandler] Processing HTTP 503 Service Unavailable response");
-        System.out.println("[ServiceUnavailableHandler] The server is temporarily unable to handle the request");
-        System.out.println("[ServiceUnavailableHandler] This may be due to maintenance or overload");
-        
         // Check for Retry-After header
         String retryAfter = response.getHeaders().get("Retry-After");
-        if (retryAfter != null) {
-            System.out.println("[ServiceUnavailableHandler] Server suggests retry after: " + retryAfter + " seconds");
-        }
         
         // Enhance error response
         if (!response.getBody().contains("503")) {

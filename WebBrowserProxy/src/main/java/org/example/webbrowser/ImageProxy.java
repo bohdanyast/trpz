@@ -3,29 +3,29 @@ package org.example.webbrowser;
 import java.util.Base64;
 
 public class ImageProxy implements IImage {
-    private ImageFile realImage;
+    private ImageFile realImage; // RealSubject
     private String fileName;
     private String filePath;
     private String placeholderContent; // Заглушка
     private boolean isRealImageLoaded;
-    
+
     public ImageProxy(String fileName, String filePath) {
         this.fileName = fileName;
         this.filePath = filePath;
         this.isRealImageLoaded = false;
         this.placeholderContent = createPlaceholder();
     }
-    
+
     @Override
     public String getFileName() {
         return fileName;
     }
-    
+
     @Override
     public String getFilePath() {
         return filePath;
     }
-    
+
     @Override
     public String getContent() {
         if (isRealImageLoaded && realImage != null) {
@@ -33,7 +33,7 @@ public class ImageProxy implements IImage {
         }
         return placeholderContent;
     }
-    
+
     @Override
     public boolean isLoaded() {
         return isRealImageLoaded;
@@ -41,34 +41,21 @@ public class ImageProxy implements IImage {
 
     @Override
     public void display() {
-        if (!isRealImageLoaded) {
-            System.out.println("Displaying placeholder for: " + fileName);
-            System.out.println("   (Real image will be loaded on demand)");
-        }
-        
         loadImage();
-        
-        if (realImage != null) {
-            realImage.display();
-        }
     }
 
     @Override
     public void loadImage() {
         if (!isRealImageLoaded) {
-            System.out.println("Proxy initiating real image loading...");
-            
+
             realImage = new ImageFile(fileName, filePath);
             realImage.loadImage();
-            
+
             isRealImageLoaded = true;
-            System.out.println("Proxy: Real image is now loaded and cached");
-        } else {
-            System.out.println("Proxy: Using cached image (already loaded)");
         }
     }
 
-    private String createPlaceholder() {
+    public String createPlaceholder() {
         String svg = String.format("""
             <svg width='300' height='200' xmlns='http://www.w3.org/2000/svg'>
                 <defs>
@@ -89,7 +76,7 @@ public class ImageProxy implements IImage {
                 </text>
             </svg>
             """, fileName);
-        
+
         return "data:image/svg+xml;base64," + Base64.getEncoder().encodeToString(svg.getBytes());
     }
 }

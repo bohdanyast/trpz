@@ -76,16 +76,11 @@ public class WebServer {
         } else {
             response.setStatusCode(404);
             response.getHeaders().put("Content-Type", "text/html");
-            response.setBody("<html><body><h1>404 - Page Not Found</h1></body></html>");
+
+            HTTPHandlerChain chain = new HTTPHandlerChain();
+            chain.process(response);
         }
         
         return response;
-    }
-
-    public void sendResponse(HTTPResponse response) {
-        System.out.println("Sending response from " + host);
-        System.out.println("Status Code: " + response.getStatusCode());
-        System.out.println("Headers: " + response.getHeaders());
-        System.out.println("Body length: " + response.getBody().length() + " characters");
     }
 }

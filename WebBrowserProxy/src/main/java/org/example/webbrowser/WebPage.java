@@ -9,14 +9,24 @@ public class WebPage {
     private List<HTMLFile> htmlResources;
     private List<CSSFile> cssResources;
     private List<JSFile> jsResources;
-    private List<IImage> imageResources; // Тепер використовуємо інтерфейс IImage (для Proxy pattern)
+    private List<IImage> imageResources;
+
+    // Unified list of all resources (Factory Method Pattern)
+    private List<Resource> allResources;
+
     private String rawHTML;
+
+    // Factory Method Pattern: використовуємо Creator
+    private ResourceCreator resourceCreator;
 
     public WebPage() {
         this.htmlResources = new ArrayList<>();
         this.cssResources = new ArrayList<>();
         this.jsResources = new ArrayList<>();
         this.imageResources = new ArrayList<>();
+        this.allResources = new ArrayList<>();
+
+        this.resourceCreator = new ResourceFactory();
     }
 
     public List<HTMLFile> getHtmlResources() {
@@ -35,6 +45,15 @@ public class WebPage {
         return imageResources;
     }
 
+    /**
+     * Gets all resources as unified list
+     *
+     * @return List of all resources
+     */
+    public List<Resource> getAllResources() {
+        return allResources;
+    }
+
     public void setRawHTML(String rawHTML) {
         this.rawHTML = rawHTML;
     }
@@ -44,62 +63,147 @@ public class WebPage {
     }
 
     /**
-     * Парсить HTML-код і витягує відповідні елементи
+     * Parses HTML code and extracts corresponding elements
      */
     public void parseHTML() {
         if (rawHTML == null || rawHTML.isEmpty()) {
+            System.out.println("[WebPage] No HTML content to parse");
             return;
         }
 
-        // Витягуємо CSS файли
-        Pattern cssPattern = Pattern.compile("<link[^>]*href=[\"']([^\"']*\\.css)[\"'][^>]*>");
-        Matcher cssMatcher = cssPattern.matcher(rawHTML);
-        while (cssMatcher.find()) {
-            String cssPath = cssMatcher.group(1);
-            CSSFile cssFile = new CSSFile(extractFileName(cssPath), cssPath);
-            cssResources.add(cssFile);
-        }
+        // Clear previous resources
+        clearResources();
 
-        // Витягуємо JS файли
-        Pattern jsPattern = Pattern.compile("<script[^>]*src=[\"']([^\"']*\\.js)[\"'][^>]*>");
-        Matcher jsMatcher = jsPattern.matcher(rawHTML);
-        while (jsMatcher.find()) {
-            String jsPath = jsMatcher.group(1);
-            JSFile jsFile = new JSFile(extractFileName(jsPath), jsPath);
-            jsResources.add(jsFile);
-        }
+        // Extract and create CSS resources
+        extractResources(
+                "<link[^>]*href=[\"']([^\"']*\\.css)[\"'][^>]*>",
+                "CSS"
+        );
 
-        // Витягуємо зображення
-        Pattern imgPattern = Pattern.compile("<img[^>]*src=[\"']([^\"']*)[\"'][^>]*>");
-        Matcher imgMatcher = imgPattern.matcher(rawHTML);
-        while (imgMatcher.find()) {
-            String imgPath = imgMatcher.group(1);
-            ImageFile imageFile = new ImageFile(extractFileName(imgPath), imgPath);
-            imageResources.add(imageFile);
-        }
+        // Extract and create JS resources
+        extractResources(
+                "<script[^>]*src=[\"']([^\"']*\\.js)[\"'][^>]*>",
+                "JavaScript"
+        );
 
-        // Основний HTML
-        HTMLFile mainHTML = new HTMLFile("index.html", "index.html", rawHTML);
-        htmlResources.add(mainHTML);
+        // Extract and create image resources
+        extractResources(
+                "<img[^>]*src=[\"']([^\"']*\\.(jpg|jpeg|png|gif|bmp|webp|svg))[\"'][^>]*>",
+                "Image"
+        );
+
+        // Create main HTML resource
+        createMainHTMLResource();
     }
 
     /**
-     * Завантажує всі підключені ресурси (CSS, JavaScript, зображення)
+     * Helper method to extract resources using regex pattern
+     *
+     * @param regexPattern Regex pattern to match resources
+     * @param resourceTypeName Name of resource type for logging
      */
-    public void loadResources() {
-        for (CSSFile css : cssResources) {
-            css.loadCSS();
+    private void extractResources(String regexPattern, String resourceTypeName) {
+        Pattern pattern = Pattern.compile(regexPattern, Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(rawHTML);
+
+        int count = 0;
+        while (matcher.find()) {
+            String resourcePath = matcher.group(1);
+            String fileName = extractFileName(resourcePath);
+
+            Resource resource = resourceCreator.createResource(fileName, resourcePath);
+            allResources.add(resource);
+
+            // Add to specific lists for backward compatibility
+            addToSpecificList(resource);
+            count++;
         }
 
-        for (JSFile js : jsResources) {
-            js.loadJS();
-        }
-
-        for (IImage img : imageResources) {
-            img.loadImage();
+        if (count > 0) {
+            System.out.println("[WebPage] Found " + count + " " + resourceTypeName + " resource(s)");
         }
     }
 
+    /**
+     * Adds resource to specific type list for backward compatibility
+     *
+     * @param resource Resource to add
+     */
+    private void addToSpecificList(Resource resource) {
+        if (resource instanceof CSSFileAdapter) {
+            cssResources.add(((CSSFileAdapter) resource).getCssFile());
+        } else if (resource instanceof JSFileAdapter) {
+            jsResources.add(((JSFileAdapter) resource).getJsFile());
+        } else if (resource instanceof ImageResourceAdapter) {
+            imageResources.add(((ImageResourceAdapter) resource).getImageProxy());
+        } else if (resource instanceof HTMLFileAdapter) {
+            htmlResources.add(((HTMLFileAdapter) resource).getHtmlFile());
+        }
+    }
+
+    /**
+     * Creates the main HTML resource using Factory Method
+     */
+    private void createMainHTMLResource() {
+        Resource mainHTMLResource = resourceCreator.createResource("index.html", "index.html");
+
+        // Встановлюємо вміст для головного HTML
+        if (mainHTMLResource instanceof HTMLFileAdapter) {
+            HTMLFile htmlFile = ((HTMLFileAdapter) mainHTMLResource).getHtmlFile();
+            htmlFile.setContent(rawHTML);
+            htmlResources.add(htmlFile);
+        }
+
+        allResources.add(mainHTMLResource);
+    }
+
+    /**
+     * Clears all resource lists
+     */
+    private void clearResources() {
+        allResources.clear();
+        cssResources.clear();
+        jsResources.clear();
+        imageResources.clear();
+        htmlResources.clear();
+    }
+
+    /**
+     * Loads all resources using unified interface
+     * Factory Method Pattern: all resources implement same interface
+     */
+    public void loadResources() {
+        int loaded = 0;
+        for (Resource resource : allResources) {
+            // Skip images as they use lazy loading (Proxy pattern)
+            if (!resource.getResourceType().equals("IMAGE")) {
+                resource.load();
+                loaded++;
+            } else {
+                System.out.println("[WebPage] Skipping image (lazy loading): " + resource.getFileName());
+            }
+        }
+
+        System.out.println("[WebPage] Successfully loaded " + loaded + " resources (images excluded - lazy loading)");
+    }
+
+    /**
+     * Displays all images (triggers lazy loading)
+     */
+    public void displayImages() {
+        for (Resource resource : allResources) {
+            if (resource instanceof ImageResourceAdapter) {
+                ((ImageResourceAdapter) resource).display();
+            }
+        }
+    }
+
+    /**
+     * Extracts filename from path
+     *
+     * @param path Full path or URL
+     * @return Filename only
+     */
     private String extractFileName(String path) {
         int lastSlash = path.lastIndexOf('/');
         return lastSlash >= 0 ? path.substring(lastSlash + 1) : path;

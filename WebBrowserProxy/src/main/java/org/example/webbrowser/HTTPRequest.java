@@ -19,18 +19,6 @@ public class HTTPRequest {
     public String getUrl() {
         return url;
     }
-    
-    public void setUrl(String url) {
-        this.url = url;
-    }
-    
-    public String getMethod() {
-        return method;
-    }
-    
-    public void setMethod(String method) {
-        this.method = method;
-    }
 
     public HTTPResponse sendRequest() {
         HTTPResponse response = new HTTPResponse();
@@ -80,15 +68,5 @@ public class HTTPRequest {
         }
         
         return response;
-    }
-
-    public void parseResponse(HTTPResponse response) {
-        if (response.getStatusCode() >= 300 && response.getStatusCode() < 400) {
-            response.handleRedirect();
-        } else if (response.getStatusCode() >= 400) {
-            response.handleError();
-        } else {
-            System.out.println("Response parsed successfully. Status: " + response.getStatusCode());
-        }
     }
 }

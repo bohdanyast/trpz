@@ -37,32 +37,4 @@ public class HTTPResponse {
     public void setBody(String body) {
         this.body = body;
     }
-
-    public void handleRedirect() {
-        if (statusCode >= 300 && statusCode < 400) {
-            String location = headers.get("Location");
-            if (location != null) {
-                System.out.println("Redirect to: " + location);
-            } else {
-                System.out.println("Redirect status code " + statusCode + " without Location header");
-            }
-        }
-    }
-
-    public void handleError() {
-        if (statusCode >= 400 && statusCode < 500) {
-            System.err.println("Client Error " + statusCode + ": " + getErrorMessage(statusCode));
-        } else if (statusCode >= 500) {
-            System.err.println("Server Error " + statusCode + ": " + getErrorMessage(statusCode));
-        }
-    }
-
-    private String getErrorMessage(Integer code) {
-        return switch (code) {
-            case 404 -> "Not Found";
-            case 502 -> "Bad Gateway";
-            case 503 -> "Service Unavailable";
-            default -> "Unknown Error";
-        };
-    }
 }
