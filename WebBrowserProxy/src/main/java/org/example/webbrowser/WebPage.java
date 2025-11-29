@@ -208,4 +208,15 @@ public class WebPage {
         int lastSlash = path.lastIndexOf('/');
         return lastSlash >= 0 ? path.substring(lastSlash + 1) : path;
     }
+
+    /**
+     * Allows visitor to visit all resources
+     *
+     * @param visitor Visitor to accept
+     */
+    public void acceptVisitor(ResourceVisitor visitor) {
+        for (Resource resource : allResources) {
+            resource.accept(visitor);
+        }
+    }
 }

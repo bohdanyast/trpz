@@ -48,4 +48,11 @@ public interface Resource {
      * @return true if loaded, false otherwise
      */
     boolean isLoaded();
+
+    /**
+     * Allows visitor to visit this resource
+     *
+     * @param visitor Visitor to accept
+     */
+    void accept(ResourceVisitor visitor);
 }

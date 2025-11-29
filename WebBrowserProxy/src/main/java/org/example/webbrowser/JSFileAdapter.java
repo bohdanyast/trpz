@@ -1,55 +1,60 @@
 package org.example.webbrowser;
 
 /**
- * Adapter Pattern: Adapts JSFile to Resource interface
- * 
- * This allows JSFile to be used through the common Resource interface
- * without modifying the original JSFile class
+ * Adapter for JSFile to implement Resource interface
+ *
+ * This adapter allows existing JSFile class to work with the new Resource interface
  */
 public class JSFileAdapter implements Resource {
-    
+
     private JSFile jsFile;
-    
+
     public JSFileAdapter(JSFile jsFile) {
         this.jsFile = jsFile;
     }
-    
+
     @Override
     public String getFileName() {
         return jsFile.getFileName();
     }
-    
+
     @Override
     public String getFilePath() {
         return jsFile.getFilePath();
     }
-    
+
     @Override
     public String getResourceType() {
-        return "JS";
+        return "JAVASCRIPT";
     }
-    
+
     @Override
     public void load() {
-        System.out.println("[JSFileAdapter] Loading JavaScript: " + jsFile.getFileName());
         jsFile.loadJS();
     }
-    
+
     @Override
     public String getContent() {
         return jsFile.getContent();
     }
-    
+
     @Override
     public boolean isLoaded() {
         return jsFile.getContent() != null && !jsFile.getContent().isEmpty();
     }
-    
+
     /**
-     * Provides access to the underlying JSFile object
-     * Used for backward compatibility
-     * 
-     * @return The wrapped JSFile object
+     * Delegates to underlying JSFile
+     */
+    @Override
+    public void accept(ResourceVisitor visitor) {
+        visitor.visit(jsFile);
+    }
+
+    /**
+     * Gets the underlying JSFile object
+     *
+     * @return JSFile instance
      */
     public JSFile getJsFile() {
         return jsFile;
