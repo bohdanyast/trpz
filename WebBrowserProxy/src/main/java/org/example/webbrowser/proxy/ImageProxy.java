@@ -1,4 +1,6 @@
-package org.example.webbrowser;
+package org.example.webbrowser.proxy;
+
+import org.example.webbrowser.ImageFile;
 
 import java.util.Base64;
 

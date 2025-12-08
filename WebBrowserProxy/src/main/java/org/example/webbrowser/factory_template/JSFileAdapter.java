@@ -1,4 +1,7 @@
-package org.example.webbrowser;
+package org.example.webbrowser.factory_template;
+
+import org.example.webbrowser.JSFile;
+import org.example.webbrowser.visitor.ResourceVisitor;
 
 /**
  * Adapter for JSFile to implement Resource interface

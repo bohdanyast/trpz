@@ -1,4 +1,8 @@
-package org.example.webbrowser;
+package org.example.webbrowser.factory_template;
+
+import org.example.webbrowser.*;
+import org.example.webbrowser.proxy.ImageProxy;
+import org.example.webbrowser.visitor.ImageResourceAdapter;
 
 /**
  * Factory Method Pattern: Concrete Creator

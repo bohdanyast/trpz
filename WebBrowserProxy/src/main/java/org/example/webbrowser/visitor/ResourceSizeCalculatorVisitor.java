@@ -1,4 +1,9 @@
-package org.example.webbrowser;
+package org.example.webbrowser.visitor;
+
+import org.example.webbrowser.CSSFile;
+import org.example.webbrowser.HTMLFile;
+import org.example.webbrowser.JSFile;
+import org.example.webbrowser.proxy.ImageProxy;
 
 /**
  * Calculates total size of all resources on a web page.

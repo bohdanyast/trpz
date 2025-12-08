@@ -1,4 +1,6 @@
-package org.example.webbrowser;
+package org.example.webbrowser.factory_template;
+
+import org.example.webbrowser.visitor.ResourceVisitor;
 
 /**
  * Factory Method Pattern: Product Interface

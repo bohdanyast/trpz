@@ -1,4 +1,6 @@
-package org.example.webbrowser;
+package org.example.webbrowser.chain;
+
+import org.example.webbrowser.HTTPResponse;
 
 /**
  * Chain of Responsibility Pattern: Abstract Handler

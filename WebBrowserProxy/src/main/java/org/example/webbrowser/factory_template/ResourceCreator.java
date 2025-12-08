@@ -1,4 +1,4 @@
-package org.example.webbrowser;
+package org.example.webbrowser.factory_template;
 
 /**
  * Factory Method Pattern: Creator (Abstract Creator)

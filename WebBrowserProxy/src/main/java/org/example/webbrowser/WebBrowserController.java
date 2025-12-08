@@ -1,6 +1,5 @@
 package org.example.webbrowser;
 
-import javafx.collections.ObservableList;
 import javafx.concurrent.Worker;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -9,6 +8,9 @@ import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebHistory;
 import javafx.scene.web.WebView;
 import netscape.javascript.JSObject;
+import org.example.webbrowser.chain.HTTPHandlerChain;
+import org.example.webbrowser.proxy.ImageProxy;
+import org.example.webbrowser.visitor.ResourceSizeCalculatorVisitor;
 
 import java.net.URL;
 import java.util.ResourceBundle;

@@ -1,4 +1,4 @@
-package org.example.webbrowser;
+package org.example.webbrowser.proxy;
 
 public interface IImage {
     void display();

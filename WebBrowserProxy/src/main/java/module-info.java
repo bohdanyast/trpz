@@ -10,4 +10,12 @@ module org.example.webbrowser {
 
     opens org.example.webbrowser to javafx.fxml;
     exports org.example.webbrowser;
+    exports org.example.webbrowser.proxy;
+    opens org.example.webbrowser.proxy to javafx.fxml;
+    exports org.example.webbrowser.chain;
+    opens org.example.webbrowser.chain to javafx.fxml;
+    exports org.example.webbrowser.factory_template;
+    opens org.example.webbrowser.factory_template to javafx.fxml;
+    exports org.example.webbrowser.visitor;
+    opens org.example.webbrowser.visitor to javafx.fxml;
 }

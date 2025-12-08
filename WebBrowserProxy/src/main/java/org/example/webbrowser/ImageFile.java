@@ -1,5 +1,7 @@
 package org.example.webbrowser;
 
+import org.example.webbrowser.proxy.IImage;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;

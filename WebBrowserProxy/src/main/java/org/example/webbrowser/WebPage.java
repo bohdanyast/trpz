@@ -1,5 +1,10 @@
 package org.example.webbrowser;
 
+import org.example.webbrowser.factory_template.*;
+import org.example.webbrowser.proxy.IImage;
+import org.example.webbrowser.visitor.ImageResourceAdapter;
+import org.example.webbrowser.visitor.ResourceVisitor;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
