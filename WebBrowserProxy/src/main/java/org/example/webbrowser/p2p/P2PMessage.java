@@ -10,15 +10,12 @@ public class P2PMessage implements Serializable {
     private static final long serialVersionUID = 1L;
     
     public enum MessageType {
-        DISCOVER,           // Discovery of peers
         CONNECT,            // Connect request
         DISCONNECT,         // Disconnect notification
         SHARE_HISTORY,      // Share browsing history
         SHARE_BOOKMARK,     // Share bookmark
         SHARE_PAGE,         // Share current page
-        REQUEST_PAGE,       // Request page from peer
         CHAT_MESSAGE,       // Text message between peers
-        SYNC_REQUEST        // Request synchronization
     }
     
     private MessageType type;

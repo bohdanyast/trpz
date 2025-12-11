@@ -3,14 +3,20 @@ package org.example.webbrowser;
 import javafx.concurrent.Worker;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.ListView;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebHistory;
 import javafx.scene.web.WebView;
 import netscape.javascript.JSObject;
-import org.example.webbrowser.chain.HTTPHandlerChain;
-import org.example.webbrowser.proxy.ImageProxy;
-import org.example.webbrowser.visitor.ResourceSizeCalculatorVisitor;
+
+import org.example.webbrowser.chain.*;
+import org.example.webbrowser.p2p.*;
+import org.example.webbrowser.factory_template.*;
+import org.example.webbrowser.visitor.*;
+import org.example.webbrowser.proxy.*;
 
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -21,6 +27,19 @@ public class WebBrowserController implements Initializable {
 
     @FXML
     private TextField textField;
+
+    // P2P UI Components (add to FXML if you want)
+    @FXML
+    private TextArea p2pLogArea;
+
+    @FXML
+    private ListView<String> peerListView;
+
+    @FXML
+    private TextField peerIpField;
+
+    @FXML
+    private TextField peerPortField;
 
     private WebEngine webEngine;
     private WebHistory webHistory;
@@ -38,6 +57,63 @@ public class WebBrowserController implements Initializable {
     // Visitor Pattern: Size calculator visitor
     private ResourceSizeCalculatorVisitor sizeCalculator;
 
+    // P2P Node for peer-to-peer communication
+    private P2PNode p2pNode;
+    private String myNodeName;
+    private int myP2PPort = 9000; // Default P2P port
+
+    @FXML
+    private Label p2pStatusLabel;
+
+    @FXML
+    private Label statusLabel;
+
+    @FXML
+    private Label pageInfoLabel;
+
+    @FXML
+    private Label peerCountLabel;
+
+    @FXML
+    private TextField chatTextField;
+
+    /**
+     * Updates status bar labels
+     */
+    private void updateStatusBar() {
+        if (p2pNode != null && p2pNode.isRunning()) {
+            if (p2pStatusLabel != null) {
+                int peerCount = p2pNode.getConnectedPeers().size();
+                p2pStatusLabel.setText("P2P: Online (Port " + myP2PPort + ")");
+                p2pStatusLabel.setStyle("-fx-text-fill: green;");
+
+                if (peerCountLabel != null) {
+                    peerCountLabel.setText(peerCount + " peer" + (peerCount != 1 ? "s" : ""));
+                }
+            }
+        }
+
+        if (currentWebPage != null && pageInfoLabel != null) {
+            int totalResources = currentWebPage.getAllResources().size();
+            pageInfoLabel.setText(totalResources + " resources");
+        }
+    }
+
+    /**
+     * Sends chat message from text field
+     */
+    @FXML
+    public void sendChatFromTextField() {
+        if (chatTextField == null) return;
+
+        String message = chatTextField.getText().trim();
+        if (!message.isEmpty()) {
+            sendChatMessage(message);
+            chatTextField.clear();
+        }
+    }
+
+
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         webEngine = webView.getEngine();
@@ -47,13 +123,19 @@ public class WebBrowserController implements Initializable {
         addressBar = new AddressBar();
         browser.setAddressBar(addressBar);
 
+        // Initialize Chain of Responsibility for HTTP handling
         handlerChain = new HTTPHandlerChain();
 
         // Initialize Visitor for resource size calculation
         sizeCalculator = new ResourceSizeCalculatorVisitor();
 
+        // Initialize P2P Node
+        initializeP2P();
+
+        // Initialize local test web server
         initializeLocalServer();
 
+        // Listener for page loading
         webEngine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
             if (newState == Worker.State.SUCCEEDED) {
                 onPageLoaded();
@@ -69,10 +151,364 @@ public class WebBrowserController implements Initializable {
             if (newLocation != null && !newLocation.isEmpty()) {
                 // Update text field with current URL
                 textField.setText(extractOriginalUrl(newLocation));
+
+                // Share with peers that we visited this page
+                shareCurrentPageWithPeers();
             }
         });
 
         loadPage();
+
+        // Start periodic status bar update
+        javafx.animation.Timeline statusUpdater = new javafx.animation.Timeline(
+                new javafx.animation.KeyFrame(
+                        javafx.util.Duration.seconds(2),
+                        event -> updateStatusBar()
+                )
+        );
+        statusUpdater.setCycleCount(javafx.animation.Timeline.INDEFINITE);
+        statusUpdater.play();
+    }
+
+    /**
+     * Initializes P2P node for peer-to-peer communication
+     */
+    private void initializeP2P() {
+        myNodeName = "Browser-" + System.getProperty("user.name");
+        int port = 9000 + (int) (Math.random() * 1000);
+
+        try {
+            p2pNode = new P2PNode(myNodeName, port);
+            p2pNode.start();
+            myP2PPort = port;
+
+            System.out.println("\n========================================");
+            System.out.println("   P2P NODE INITIALIZED");
+            System.out.println("========================================");
+            System.out.println("Node Name: " + myNodeName);
+            System.out.println("Node ID: " + p2pNode.getNodeId());
+            System.out.println("Port: " + myP2PPort);
+            System.out.println("========================================\n");
+
+            p2pNode.addMessageListener(this::handleP2PMessage);
+            System.out.println("P2P message listener registered");
+
+            // Update UI if exists
+            if (p2pLogArea != null) {
+                appendP2PLog("P2P Node started on port " + myP2PPort);
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to start P2P on port " + port + ", trying next...");
+        }
+    }
+
+    /**
+     * Handles incoming P2P messages
+     * This method is called by P2PNode when message arrives
+     */
+    private void handleP2PMessage(P2PMessage message) {
+//        System.out.println("\n========================================");
+//        System.out.println("[P2P Message Received in Controller]");
+//        System.out.println("From: " + message.getSenderName());
+//        System.out.println("Type: " + message.getType());
+//        System.out.println("Time: " + message.getTimestamp());
+//        System.out.println("========================================");
+
+        switch (message.getType()) {
+            case CONNECT:
+                handlePeerConnect(message);
+                break;
+
+            case DISCONNECT:
+                handlePeerDisconnect(message);
+                break;
+
+            case SHARE_HISTORY:
+                handleSharedHistory(message);
+                break;
+
+            case SHARE_BOOKMARK:
+                handleSharedBookmark(message);
+                break;
+
+            case SHARE_PAGE:
+                handleSharedPage(message);
+                break;
+
+            case CHAT_MESSAGE:
+                handleChatMessage(message);
+                break;
+
+            default:
+                System.out.println("Unknown message type: " + message.getType());
+        }
+
+        // Update UI
+        if (p2pLogArea != null) {
+            appendP2PLog(message.getType() + " from " + message.getSenderName());
+        }
+    }
+
+    /**
+     * Handles peer connection
+     */
+    private void handlePeerConnect(P2PMessage message) {
+        PeerInfo peerInfo = (PeerInfo) message.getPayload();
+        System.out.println("Peer connected: " + peerInfo);
+
+        appendP2PLog("Peer connected: " + peerInfo.getPeerName());
+        updatePeerList();
+    }
+
+    /**
+     * Handles peer disconnection
+     */
+    private void handlePeerDisconnect(P2PMessage message) {
+        System.out.println("Peer disconnected: " + message.getSenderName());
+
+        appendP2PLog("Peer disconnected: " + message.getSenderName());
+        updatePeerList();
+    }
+
+    /**
+     * Handles shared browsing history
+     */
+    private void handleSharedHistory(P2PMessage message) {
+        BrowsingHistoryEntry entry = (BrowsingHistoryEntry) message.getPayload();
+
+        System.out.println("Received shared history:");
+        System.out.println("  URL: " + entry.getUrl());
+        System.out.println("  Title: " + entry.getTitle());
+        System.out.println("  From: " + entry.getPeerName());
+        System.out.println("  Time: " + entry.getVisitTime());
+
+        appendP2PLog("Shared history: " + entry.getTitle() + " from " + entry.getPeerName());
+    }
+
+    /**
+     * Handles shared bookmark
+     */
+    private void handleSharedBookmark(P2PMessage message) {
+        BrowsingHistoryEntry bookmark = (BrowsingHistoryEntry) message.getPayload();
+
+        System.out.println("Received shared bookmark:");
+        System.out.println("  URL: " + bookmark.getUrl());
+        System.out.println("  Title: " + bookmark.getTitle());
+        System.out.println("  From: " + bookmark.getPeerName());
+
+        appendP2PLog("Shared bookmark: " + bookmark.getTitle());
+    }
+
+    /**
+     * Handles shared page
+     */
+    private void handleSharedPage(P2PMessage message) {
+        String sharedUrl = (String) message.getPayload();
+
+        System.out.println("Received shared page: " + sharedUrl);
+        System.out.println("From: " + message.getSenderName());
+
+        appendP2PLog(message.getSenderName() + " shared: " + sharedUrl);
+
+        // Ask user if they want to open it
+        // For now, just log it
+    }
+
+    /**
+     * Handles chat message
+     */
+    private void handleChatMessage(P2PMessage message) {
+        System.out.println("[DEBUG] handleChatMessage called"); // DEBUG
+
+        String chatText = (String) message.getPayload();
+
+        System.out.println("Chat from " + message.getSenderName() + ": " + chatText);
+
+        appendP2PLog(message.getSenderName() + ": " + chatText);
+    }
+
+    /**
+     * Shares current page with all peers
+     */
+    private void shareCurrentPageWithPeers() {
+        if (p2pNode == null || !p2pNode.isRunning()) {
+            return;
+        }
+
+        String currentUrl = addressBar.getUrl();
+        if (currentUrl == null || currentUrl.isEmpty() || currentUrl.contains("test.com")) {
+            return; // Don't share test.com or empty URLs
+        }
+
+        try {
+            // Get page title
+            String title = (String) webEngine.executeScript("document.title");
+            if (title == null || title.isEmpty()) {
+                title = currentUrl;
+            }
+
+            // Create history entry
+            BrowsingHistoryEntry entry = new BrowsingHistoryEntry(
+                    currentUrl,
+                    title,
+                    p2pNode.getNodeId(),
+                    p2pNode.getNodeName()
+            );
+
+            // Create message
+            P2PMessage message = new P2PMessage(
+                    P2PMessage.MessageType.SHARE_HISTORY,
+                    p2pNode.getNodeId(),
+                    p2pNode.getNodeName(),
+                    entry
+            );
+
+            // Broadcast to all peers
+            p2pNode.broadcast(message);
+
+            System.out.println("Shared page with peers: " + title);
+
+        } catch (Exception e) {
+            System.err.println("Failed to share page: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Connects to a peer manually
+     */
+    @FXML
+    public void connectToPeer() {
+        if (p2pNode == null || !p2pNode.isRunning()) {
+            appendP2PLog("P2P node is not running!");
+            return;
+        }
+
+        String peerIp = peerIpField != null ? peerIpField.getText() : "127.0.0.1";
+        String peerPortStr = peerPortField != null ? peerPortField.getText() : "9001";
+
+        try {
+            int peerPort = Integer.parseInt(peerPortStr);
+
+            System.out.println("Connecting to peer: " + peerIp + ":" + peerPort);
+            appendP2PLog("Connecting to " + peerIp + ":" + peerPort + "...");
+
+            boolean success = p2pNode.connectToPeer(peerIp, peerPort);
+
+            if (success) {
+                appendP2PLog("Successfully connected to peer!");
+                updatePeerList();
+            } else {
+                appendP2PLog("Failed to connect to peer");
+            }
+
+        } catch (NumberFormatException e) {
+            appendP2PLog("Invalid port number!");
+        }
+    }
+
+    /**
+     * Broadcasts current page to all peers
+     */
+    @FXML
+    public void broadcastCurrentPage() {
+        if (p2pNode == null || !p2pNode.isRunning()) {
+            appendP2PLog("P2P node is not running!");
+            return;
+        }
+
+        String currentUrl = addressBar.getUrl();
+        if (currentUrl == null || currentUrl.isEmpty()) {
+            return;
+        }
+
+        P2PMessage message = new P2PMessage(
+                P2PMessage.MessageType.SHARE_PAGE,
+                p2pNode.getNodeId(),
+                p2pNode.getNodeName(),
+                currentUrl
+        );
+
+        p2pNode.broadcast(message);
+
+        appendP2PLog("Broadcasted current page to all peers");
+    }
+
+    /**
+     * Sends chat message to all peers
+     */
+    @FXML
+    public void sendChatMessage(String message) {
+        if (p2pNode == null || !p2pNode.isRunning()) {
+            return;
+        }
+
+        P2PMessage chatMsg = new P2PMessage(
+                P2PMessage.MessageType.CHAT_MESSAGE,
+                p2pNode.getNodeId(),
+                p2pNode.getNodeName(),
+                message
+        );
+
+        p2pNode.broadcast(chatMsg);
+
+        appendP2PLog("Me: " + message);
+    }
+
+    /**
+     * Updates peer list in UI
+     */
+    private void updatePeerList() {
+        if (peerListView == null || p2pNode == null) {
+            return;
+        }
+
+        javafx.application.Platform.runLater(() -> {
+            peerListView.getItems().clear();
+
+            for (PeerInfo peer : p2pNode.getConnectedPeers().values()) {
+                peerListView.getItems().add(peer.getPeerName() + " (" +
+                        peer.getIpAddress() + ":" +
+                        peer.getPort() + ")");
+            }
+        });
+    }
+
+    /**
+     * Appends log message to P2P log area
+     * MUST run on JavaFX thread
+     */
+    private void appendP2PLog(String message) {
+        System.out.println("[DEBUG] appendP2PLog called: " + message); // DEBUG
+
+        if (p2pLogArea == null) {
+            System.out.println("[DEBUG] p2pLogArea is null!"); // DEBUG
+            return;
+        }
+
+        javafx.application.Platform.runLater(() -> {
+            try {
+                String timestamp = java.time.LocalTime.now().toString();
+                p2pLogArea.appendText("[" + timestamp + "] " + message + "\n");
+                System.out.println("[DEBUG] Message added to log area"); // DEBUG
+            } catch (Exception e) {
+                System.err.println("[DEBUG] Error updating log area: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
+    }
+
+    /**
+     * Gets P2P connection info
+     */
+    public String getP2PInfo() {
+        if (p2pNode == null || !p2pNode.isRunning()) {
+            return "P2P: Offline";
+        }
+
+        return String.format("P2P: %s on port %d (%d peers)",
+                myNodeName,
+                myP2PPort,
+                p2pNode.getConnectedPeers().size());
     }
 
     /**
@@ -80,20 +516,15 @@ public class WebBrowserController implements Initializable {
      */
     private void injectLinkHandler() {
         try {
-            // Make this controller accessible from JavaScript
             JSObject window = (JSObject) webEngine.executeScript("window");
             window.setMember("javaController", this);
 
-            // Inject JavaScript to handle link clicks
             String script = """
                 (function() {
-                    // Remove old listeners if any
                     if (window.linkHandlerInstalled) return;
                     window.linkHandlerInstalled = true;
                     
-                    // Add click listener to document
                     document.addEventListener('click', function(e) {
-                        // Find closest <a> tag
                         var target = e.target;
                         while (target && target.tagName !== 'A') {
                             target = target.parentElement;
@@ -102,7 +533,6 @@ public class WebBrowserController implements Initializable {
                         if (target && target.tagName === 'A') {
                             var href = target.getAttribute('href');
                             
-                            // Skip if no href or special links
                             if (!href || 
                                 href.startsWith('#') || 
                                 href.startsWith('javascript:') ||
@@ -111,18 +541,14 @@ public class WebBrowserController implements Initializable {
                                 return;
                             }
                             
-                            // Check if target="_blank" or ctrl/cmd key pressed
                             if (target.getAttribute('target') === '_blank' || 
                                 e.ctrlKey || e.metaKey) {
-                                // Let browser handle it normally
                                 return;
                             }
                             
-                            // Prevent default navigation
                             e.preventDefault();
                             e.stopPropagation();
                             
-                            // Call Java method to handle navigation
                             console.log('Navigating to: ' + href);
                             window.javaController.handleLinkClick(href);
                         }
@@ -141,24 +567,16 @@ public class WebBrowserController implements Initializable {
         }
     }
 
-    /**
-     * Called from JavaScript when user clicks a link
-     * This method is exposed to JavaScript via JSObject
-     */
     public void handleLinkClick(String href) {
         System.out.println("\n=== Link Clicked ===");
         System.out.println("Link: " + href);
 
         try {
-            // Get current page URL
             String currentUrl = webEngine.getLocation();
-
-            // Resolve relative URL to absolute
             String absoluteUrl = resolveUrl(currentUrl, href);
             System.out.println("Resolved to: " + absoluteUrl);
 
             textField.setText(extractOriginalUrl(absoluteUrl));
-
             navigateToUrl(absoluteUrl);
 
         } catch (Exception e) {
@@ -167,32 +585,24 @@ public class WebBrowserController implements Initializable {
         }
     }
 
-    /**
-     * Resolves relative URL to absolute based on current page
-     */
     private String resolveUrl(String baseUrl, String relativeUrl) {
         try {
-            // If already absolute
             if (relativeUrl.startsWith("http://") || relativeUrl.startsWith("https://")) {
                 return relativeUrl;
             }
 
-            // If protocol-relative
             if (relativeUrl.startsWith("//")) {
                 java.net.URL base = new java.net.URL(baseUrl);
                 return base.getProtocol() + ":" + relativeUrl;
             }
 
-            // If file:// URL (local cache)
             if (baseUrl.startsWith("file://")) {
-                // Extract original URL from our cache structure
                 String originalUrl = extractOriginalUrl(baseUrl);
                 java.net.URL base = new java.net.URL(originalUrl);
                 java.net.URL resolved = new java.net.URL(base, relativeUrl);
                 return resolved.toString();
             }
 
-            // Normal relative URL
             java.net.URL base = new java.net.URL(baseUrl);
             java.net.URL resolved = new java.net.URL(base, relativeUrl);
             return resolved.toString();
@@ -203,27 +613,18 @@ public class WebBrowserController implements Initializable {
         }
     }
 
-    /**
-     * Extracts original URL from file:// path
-     * Example: file:///C:/browser_cache/example_com/index.html -> https://example.com
-     */
     private String extractOriginalUrl(String fileUrl) {
         if (!fileUrl.startsWith("file://")) {
             return fileUrl;
         }
 
         try {
-            // Extract domain from cache path
-            // browser_cache/example_com/ -> example.com
             String path = fileUrl;
             int cacheIndex = path.indexOf("browser_cache");
             if (cacheIndex != -1) {
                 String afterCache = path.substring(cacheIndex + "browser_cache".length() + 1);
                 String domain = afterCache.split("/")[0];
-
-                // Convert example_com back to example.com
                 domain = domain.replace("_", ".");
-
                 return "https://" + domain;
             }
         } catch (Exception e) {
@@ -233,14 +634,9 @@ public class WebBrowserController implements Initializable {
         return fileUrl;
     }
 
-    /**
-     * Navigates to URL (handles both test.com and real websites)
-     */
     private void navigateToUrl(String url) {
-        // Update address bar
         addressBar.setUrl(url);
 
-        // Check if test.com
         if (url.contains("test.com")) {
             handleLocalServerRequest(url);
         } else {
@@ -248,16 +644,10 @@ public class WebBrowserController implements Initializable {
         }
     }
 
-    /**
-     * Initializes local test web server
-     */
     private void initializeLocalServer() {
         localServer = new WebServer("test.com");
-
-        // Add test resources
         localServer.addResource("index.html");
 
-        // Create test page for successful response (200)
         WebPage testPage = new WebPage();
         String testHTML = """
             <!DOCTYPE html>
@@ -317,22 +707,18 @@ public class WebBrowserController implements Initializable {
             return;
         }
 
-        // Check if this is a request to local test server
         if (inputUrl.contains("test.com")) {
             handleLocalServerRequest(inputUrl);
             return;
         }
 
-        // Use AddressBar for validation
         if (addressBar.validateURL(inputUrl)) {
-            // Form full URL with protocol
             String fullUrl = inputUrl;
             if (!inputUrl.startsWith("http://") && !inputUrl.startsWith("https://")) {
                 fullUrl = addressBar.getProtocol() + "://" + inputUrl;
             }
 
             addressBar.setUrl(fullUrl);
-
             loadRealWebsite(fullUrl);
 
         } else {
@@ -341,26 +727,17 @@ public class WebBrowserController implements Initializable {
         }
     }
 
-    /**
-     * Loads real website using WebPageFetcher
-     * Downloads all resources and loads via file:// URL
-     */
     private void loadRealWebsite(String url) {
         System.out.println("\n" + "=".repeat(50));
         System.out.println("LOADING WEBSITE: " + url);
         System.out.println("=".repeat(50));
 
         try {
-            // Create HTTP request
             HTTPRequest request = new HTTPRequest(url, "GET");
-
-            // Send request - WebPageFetcher will download everything
             HTTPResponse response = request.sendRequest();
 
-            // Process response through Chain of Responsibility
             handlerChain.process(response);
 
-            // Load page via file:// URL
             String fileUrl = response.getHeaders().get("X-File-URL");
             if (fileUrl != null) {
                 webEngine.load(fileUrl);
@@ -368,7 +745,6 @@ public class WebBrowserController implements Initializable {
                 webEngine.loadContent(response.getBody(), "text/html");
             }
 
-            // Parse page for our architecture
             currentWebPage = new WebPage();
             currentWebPage.setRawHTML(response.getBody());
             currentWebPage.parseHTML();
@@ -384,10 +760,9 @@ public class WebBrowserController implements Initializable {
         }
     }
 
-    /**
-     * Handles requests to local test server
-     */
     private void handleLocalServerRequest(String url) {
+        System.out.println("\n=== Local Server Request ===");
+
         String fullUrl = url;
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
             fullUrl = "http://" + url;
@@ -398,7 +773,6 @@ public class WebBrowserController implements Initializable {
 
         HTTPResponse response;
 
-        // Determine status code based on URL path
         if (url.contains("/404")) {
             response = new HTTPResponse();
             response.setStatusCode(404);
@@ -421,9 +795,6 @@ public class WebBrowserController implements Initializable {
         } else {
             response = localServer.processRequest(request);
         }
-
-
-        // Process response through handler chain
         handlerChain.process(response);
 
         String displayContent = response.getBody();
@@ -433,18 +804,15 @@ public class WebBrowserController implements Initializable {
 
         webEngine.loadContent(displayContent, "text/html");
 
-        // Parse page for Factory Method and Proxy patterns
         currentWebPage = new WebPage();
         currentWebPage.setRawHTML(response.getBody());
         currentWebPage.parseHTML();
 
         // VISITOR PATTERN IN ACTION!
-        // Calculate page size using visitor
         if (response.getStatusCode() == 200) {
             calculatePageSize();
         }
 
-        // Log result
         if (response.getStatusCode() == 200) {
             System.out.println("Page loaded successfully from local server");
             System.out.println("Handler used: " + response.getHeaders().get("X-Handled-By"));
@@ -457,7 +825,7 @@ public class WebBrowserController implements Initializable {
     }
 
     /**
-     * Calculates page size using ResourceSizeCalculatorVisitor
+     * VISITOR PATTERN: Calculates page size using ResourceSizeCalculatorVisitor
      */
     private void calculatePageSize() {
         if (currentWebPage == null) {
@@ -465,10 +833,15 @@ public class WebBrowserController implements Initializable {
             return;
         }
 
+        System.out.println("\n========================================");
+        System.out.println("   VISITOR PATTERN: SIZE CALCULATION");
+        System.out.println("========================================");
+
         sizeCalculator.reset();
         currentWebPage.acceptVisitor(sizeCalculator);
         sizeCalculator.printReport();
 
+        System.out.println("Quick Stats:");
         System.out.println("  Total resources: " +
                 (sizeCalculator.getHtmlCount() +
                         sizeCalculator.getCssCount() +
@@ -477,9 +850,6 @@ public class WebBrowserController implements Initializable {
         System.out.println("  Total size: " + formatBytes(sizeCalculator.getTotalSize()));
     }
 
-    /**
-     * Helper method to format bytes
-     */
     private String formatBytes(long bytes) {
         if (bytes < 1024) {
             return bytes + " B";
@@ -490,18 +860,11 @@ public class WebBrowserController implements Initializable {
         }
     }
 
-    /**
-     * Replaces all <img> tags with proxy placeholder images
-     *
-     * @param html Original HTML content
-     * @return HTML with images replaced by proxy placeholders
-     */
     private String replaceImagesWithProxies(String html) {
         if (html == null || html.isEmpty()) {
             return html;
         }
 
-        // Pattern to match <img> tags
         java.util.regex.Pattern imgPattern = java.util.regex.Pattern.compile(
                 "<img([^>]*?)src=[\"']([^\"']*)[\"']([^>]*?)>",
                 java.util.regex.Pattern.CASE_INSENSITIVE
@@ -515,18 +878,15 @@ public class WebBrowserController implements Initializable {
             String originalSrc = matcher.group(2);
             String afterSrc = matcher.group(3);
 
-            // Extract filename from path
             String fileName = originalSrc;
             int lastSlash = originalSrc.lastIndexOf('/');
             if (lastSlash >= 0) {
                 fileName = originalSrc.substring(lastSlash + 1);
             }
 
-            // Create ImageProxy and get placeholder
             ImageProxy proxy = new ImageProxy(fileName, originalSrc);
             String placeholderDataURI = proxy.createPlaceholder();
 
-            // Replace with proxy placeholder
             String replacement = "<img" + beforeSrc +
                     "src=\"" + placeholderDataURI + "\" " +
                     "data-original-src=\"" + originalSrc + "\"" +
@@ -539,9 +899,6 @@ public class WebBrowserController implements Initializable {
         return result.toString();
     }
 
-    /**
-     * Called when page successfully loaded
-     */
     private void onPageLoaded() {
         try {
             String htmlContent = (String) webEngine.executeScript("document.documentElement.outerHTML");
@@ -574,25 +931,5 @@ public class WebBrowserController implements Initializable {
 
     public Browser getBrowser() {
         return browser;
-    }
-
-    public AddressBar getAddressBar() {
-        return addressBar;
-    }
-
-    public WebPage getCurrentWebPage() {
-        return currentWebPage;
-    }
-
-    public WebServer getLocalServer() {
-        return localServer;
-    }
-
-    public HTTPHandlerChain getHandlerChain() {
-        return handlerChain;
-    }
-
-    public ResourceSizeCalculatorVisitor getSizeCalculator() {
-        return sizeCalculator;
     }
 }

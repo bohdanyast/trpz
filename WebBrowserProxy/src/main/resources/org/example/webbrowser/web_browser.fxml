@@ -1,18 +1,122 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.TextField?>
-<?import javafx.scene.layout.AnchorPane?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.web.WebView?>
 
-<AnchorPane prefHeight="580.0" prefWidth="835.0" xmlns="http://javafx.com/javafx/17.0.14" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.webbrowser.WebBrowserController">
-    <WebView fx:id="webView" layoutX="3.0" layoutY="61.0" prefHeight="515.0" prefWidth="830.0" />
-   <HBox alignment="TOP_CENTER" layoutY="14.0" prefHeight="38.0" prefWidth="836.0" spacing="15.0" AnchorPane.bottomAnchor="527.2" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="14.0">
-      <children>
-         <Button mnemonicParsing="false" onAction="#reload" prefHeight="38.0" prefWidth="42.0" text="⟳" />
-          <TextField fx:id="textField" prefHeight="38.0" prefWidth="566.0" promptText="Введіть посилання:" />
-          <Button mnemonicParsing="false" onAction="#loadPage" prefHeight="38.0" prefWidth="42.0" text="🔍" />
-      </children>
-   </HBox>
-</AnchorPane>
+<?import javafx.scene.web.WebView?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/17.0.14"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="org.example.webbrowser.WebBrowserController"
+            prefHeight="800.0" prefWidth="1400.0">
+
+    <!-- Top: Address Bar -->
+    <top>
+        <VBox spacing="5">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+
+            <!-- Navigation Bar -->
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Button text="↻" onAction="#reload" prefWidth="40"/>
+
+                <TextField fx:id="textField"
+                           HBox.hgrow="ALWAYS"
+                           onAction="#loadPage"
+                           promptText="Enter URL..."/>
+
+                <Button text="Go" onAction="#loadPage" prefWidth="60"/>
+            </HBox>
+
+            <!-- P2P Control Bar -->
+            <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-background-color: #f0f0f0; -fx-padding: 5;">
+                <Label text="P2P:" style="-fx-font-weight: bold;"/>
+
+                <TextField fx:id="peerIpField"
+                           promptText="Peer IP (127.0.0.1)"
+                           prefWidth="120"/>
+
+                <TextField fx:id="peerPortField"
+                           promptText="Port (9001)"
+                           prefWidth="80"/>
+
+                <Button text="Connect to Peer" onAction="#connectToPeer"/>
+
+                <Separator orientation="VERTICAL"/>
+
+                <Button text="Share Page" onAction="#broadcastCurrentPage"/>
+
+                <Region HBox.hgrow="ALWAYS"/>
+
+                <Label fx:id="p2pStatusLabel" text="P2P Status: Initializing..." style="-fx-text-fill: blue;"/>
+            </HBox>
+        </VBox>
+    </top>
+
+    <!-- Center: WebView -->
+    <center>
+        <WebView fx:id="webView"/>
+    </center>
+
+    <!-- Right: P2P Panel -->
+    <right>
+        <VBox spacing="10" prefWidth="300" style="-fx-background-color: #fafafa;">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+
+            <!-- P2P Info -->
+            <Label text="P2P Network" style="-fx-font-size: 16; -fx-font-weight: bold;"/>
+
+            <Separator/>
+
+            <!-- Connected Peers -->
+            <Label text="Connected Peers:"/>
+            <ListView fx:id="peerListView" prefHeight="150"/>
+
+            <Separator/>
+
+            <!-- P2P Log -->
+            <Label text="Activity Log:"/>
+            <TextArea fx:id="p2pLogArea"
+                      editable="false"
+                      wrapText="true"
+                      VBox.vgrow="ALWAYS"
+                      style="-fx-font-family: 'Courier New'; -fx-font-size: 10;"/>
+
+            <Separator/>
+
+            <!-- Chat Box -->
+            <Label text="Chat:"/>
+            <HBox spacing="5">
+                <TextField fx:id="chatTextField"
+                           promptText="Type message..."
+                           HBox.hgrow="ALWAYS"
+                           onAction="#sendChatFromTextField"/>
+                <Button text="Send" onAction="#sendChatFromTextField"/>
+            </HBox>
+        </VBox>
+    </right>
+
+    <!-- Bottom: Status Bar -->
+    <bottom>
+        <HBox spacing="20" alignment="CENTER_LEFT" style="-fx-background-color: #e0e0e0; -fx-padding: 5;">
+            <padding>
+                <Insets left="10" right="10"/>
+            </padding>
+
+            <Label fx:id="statusLabel" text="Ready"/>
+
+            <Separator orientation="VERTICAL"/>
+
+            <Label fx:id="pageInfoLabel" text="No page loaded"/>
+
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <Label fx:id="peerCountLabel" text="0 peers"/>
+        </HBox>
+    </bottom>
+
+</BorderPane>
